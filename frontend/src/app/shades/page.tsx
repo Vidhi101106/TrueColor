@@ -84,7 +84,7 @@ export default function ShadesPage() {
               </select>
             </label>
           </div>
-          <p className="mt-3 text-xs text-zinc-500">Prices are CAD reference examples, not live quotes. Products without a verified reference price are excluded from budget-filtered results.</p>
+          <p className="mt-3 text-xs text-zinc-500">Prices are CAD reference examples, not live quotes. Fenty uses its regular (pre-sale) reference price; current retailer discounts may be lower. Products without a reference price are excluded from budget filters.</p>
         </div>
         <p className="mt-6 text-sm font-semibold text-zinc-700">{filtered.length} suggested shades</p>
         {products.length === 0 && <p className="mt-4 text-zinc-700">No structured recommendations are available yet. Re-run your photo analysis after updating the backend.</p>}
@@ -105,7 +105,7 @@ export default function ShadesPage() {
                 </div>
               </div>
               {p.product_url && <a className="text-sm text-pink-700 underline mt-5 inline-block" href={p.product_url} target="_blank" rel="noopener noreferrer">View product ↗</a>}
-              {p.price_reference_url && <a className="block text-xs text-zinc-500 underline mt-2" href={p.price_reference_url} target="_blank" rel="noopener noreferrer">Price reference</a>}
+              {p.price_reference_url && p.price_reference_url !== p.product_url && <a className="block text-xs text-zinc-500 underline mt-2" href={p.price_reference_url} target="_blank" rel="noopener noreferrer">Price reference</a>}
             </article>
           ))}
         </div>
