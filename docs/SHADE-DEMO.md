@@ -8,7 +8,11 @@ commercially validated foundation matcher.
   The prior code mixed 8-bit LAB and threshold rules for true LAB.
 - Smaller cheek sample patches to reduce background/hair contamination.
 - The API now returns `colors` for the frontend results display.
-- Added example shades for e.l.f. Soft Glam Satin and Maybelline Fit Me.
+- Added example shades for e.l.f. Soft Glam Satin, Maybelline Fit Me,
+  and 26 Anastasia Beverly Hills Impeccable foundation shade codes.
+- Brand names in the matcher are now discovered from the product catalog.
+  The browser filter is built from the response, so it needs no new hardcoded
+  frontend choice when a brand is added.
 - Unified `products` recommendations with brand, shade, approximate color
   distance, currency-specific reference price and source link.
 - UI filters by brand and maximum CAD price, sorts low/high or by match.
@@ -25,7 +29,10 @@ commercially validated foundation matcher.
   and Too Faced Born This Way **CAD $66**. The link on each card opens the
   product listing, not necessarily a preselected shade. Prices and stock
   may vary by shade, retailer and date.
-- New e.l.f./Maybelline hex swatches are visual **estimates**, not captured
+- ABH Impeccable Blurring Second-Skin Matte Foundation is **CAD $66.50** at
+  Sephora Canada (reference, not a live price). The ABH website describes
+  44 shades, but this demo currently includes **26 sample shade codes**.
+- New ABH, e.l.f./Maybelline hex swatches are visual **estimates**, not captured
   from manufacturer color calibration. Existing brand swatches are similarly
   approximate. Delta E ranking is a heuristic, not a guarantee of true
   foundation color, undertone, wear or oxidation.
@@ -42,6 +49,34 @@ Sources:
 - https://www.sephora.com/ca/en/product/pro-filtr-soft-matte-longwear-foundation-P87985432
 - https://www.sephora.com/ca/en/product/natural-radiant-longwear-foundation-P427301
 - https://www.sephora.com/ca/en/product/too-faced-born-this-way-natural-finish-foundation-P517843
+- https://www.sephora.com/ca/en/product/anastasia-beverly-hills-impeccable-blurring-second-skin-matte-foundation-P515098
+- https://www.anastasiabeverlyhills.com/products/impeccable-blurring-second-skin-matte-foundation
+
+## Adding future brands
+
+This prototype uses the static Python list in
+`backend/app/data/extended_catalog.py`. To add a brand, first verify the
+current *specific product* and shade names against an official store/product
+page, then obtain measured or at least transparently estimated hex swatches
+and record undertone, product URL, Canadian reference price, and source URL.
+Append a `_make("Brand", "Product", price, price_source_url, product_url,
+[(shade_name, hex, undertone), ...])` entry to `EXTRA_PRODUCTS`.
+
+`ShadeMatcherService` now groups all product records by brand automatically,
+compares photo LAB values to each shade's LAB representation, and emits the
+best three per brand in `products`. The website builds the dropdown from
+`products`, so adding a brand only needs the catalog entry and regression
+tests. Price filters use CAD reference prices and sorting uses the selected
+metric. Results must be re-analyzed after updating the backend because the
+browser caches earlier results in sessionStorage.
+
+**To turn this into a trustworthy product**: use licensed manufacturer
+product feeds or verified store data; capture calibrated physical/digital
+swatch samples across light conditions; evaluate accuracy on consented
+reference images and diverse skin tones; update reference prices with a
+periodic feed; and move product records into a database with schema
+validation rather than manually editing Python source. Do not claim the
+demo has accomplished those steps.
 
 ## Mac run-through
 
