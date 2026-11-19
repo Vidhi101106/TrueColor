@@ -47,6 +47,21 @@ class ShadePipelineTests(unittest.TestCase):
         self.assertTrue(matches["products"])
         self.assertTrue(any(p["price_cad"] is not None for p in matches["products"]))
 
+    def test_anastasia_discovered_from_catalog(self):
+        from app.data.extended_catalog import EXTRA_PRODUCTS
+        abh = [p for p in EXTRA_PRODUCTS if p["brand"] == "Anastasia Beverly Hills"]
+        self.assertEqual(len(abh), 26)
+        self.assertTrue(all(p["price_cad"] == 66.50 for p in abh))
+        self.assertTrue(all(p["product_url"].startswith("https://www.sephora.com/ca/en/product/") for p in abh))
+
+        matches = asyncio.run(ShadeMatcherService().find_matches(hex_to_lab("#D6A47F"), "warm"))
+        brand_matches = [
+            p for p in matches["products"] if p["brand"] == "Anastasia Beverly Hills"
+        ]
+        self.assertEqual(len(brand_matches), 3)
+        self.assertTrue(all(p["swatch_estimated"] for p in brand_matches))
+        self.assertEqual(len(matches["products"]), 18)  # 3 each across six brands
+
     def test_original_brands_include_prices_and_store_links(self):
         matches = asyncio.run(ShadeMatcherService().find_matches(hex_to_lab("#D6A47F"), "warm"))
         expected = {"Fenty": 54.00, "Nars": 73.00, "Too Faced": 66.00}
