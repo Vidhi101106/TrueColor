@@ -7,6 +7,7 @@ Now supports both Supabase and local fallback
 import numpy as np
 from typing import Dict, List
 from app.data.makeup_database import MAKEUP_DATABASE
+from app.data.extended_catalog import EXTRA_PRODUCTS
 from app.database.supabase_client import supabase_client
 from app.services.skin_analysis import SkinAnalysisService
 import logging
@@ -43,10 +44,11 @@ class ShadeMatcherService:
             if self._using_supabase:
                 # Load from Supabase
                 self._products_cache = await supabase_client.get_all_products()
+                self._products_cache.extend(EXTRA_PRODUCTS)
                 logger.info(f"📦 Loaded {len(self._products_cache)} products from Supabase")
             else:
                 # Fallback to local database
-                self._products_cache = self._convert_local_to_products(MAKEUP_DATABASE)
+                self._products_cache = self._convert_local_to_products(MAKEUP_DATABASE) + EXTRA_PRODUCTS
                 logger.info(f"📦 Using local database with {len(self._products_cache)} products")
         
         return self._products_cache
@@ -64,39 +66,56 @@ class ShadeMatcherService:
                     "lab_l": float(shade["lab"][0]),
                     "lab_a": float(shade["lab"][1]),
                     "lab_b": float(shade["lab"][2]),
-                    "undertone": shade["undertone"]
+                    "undertone": shade["undertone"],
+                    "product_line": {"fenty": "Pro Filt'r Foundation", "nars": "Natural Radiant Longwear", "tooFaced": "Born This Way"}.get(brand, "Foundation"),
+                    "price_cad": None,
+                    "price_reference_url": None,
+                    "product_url": "",
+                    "swatch_estimated": True
                 })
         return products
     
-    async def find_matches(self, skin_lab: np.ndarray, undertone: str) -> Dict[str, List[str]]:
-        """
-        Find best matching makeup shades for a given skin tone
-        
-        Args:
-            skin_lab: User's skin tone in LAB [L, A, B]
-            undertone: User's undertone ("warm", "neutral", "cool")
-            
-        Returns:
-            Dictionary with brand names as keys and lists of shade names as values
+    async def find_matches(self, skin_lab: np.ndarray, undertone: str) -> Dict:
+        """Top three per brand plus a sortable list of product recommendations.
+
+        Color distance compares approximate screen swatches. It cannot guarantee
+        a match to the real physical product, especially under different lighting.
         """
         products = await self._load_products()
-        
-        matches = {
-            "fenty": [],
-            "nars": [],
-            "tooFaced": []
+        brand_keys = {
+            "fenty": "Fenty", "nars": "Nars", "tooFaced": "Too Faced",
+            "elf": "e.l.f.", "maybelline": "Maybelline",
         }
-        
-        # Group products by brand and find matches
-        for brand_key in matches.keys():
-            brand_name = "Too Faced" if brand_key == "tooFaced" else brand_key.title()
-            brand_products = [p for p in products if p["brand"].lower() == brand_name.lower()]
-            
-            brand_matches = self._find_brand_matches_from_list(skin_lab, undertone, brand_products)
-            matches[brand_key] = brand_matches
-        
+        matches = {key: [] for key in brand_keys}
+        unified = []
+        for key, brand_name in brand_keys.items():
+            subset = [p for p in products if p["brand"].lower() == brand_name.lower()]
+            ranked = []
+            for product in subset:
+                shade_lab = np.array([product["lab_l"], product["lab_a"], product["lab_b"]], dtype=float)
+                delta = float(self.skin_analyzer.calculate_color_distance(skin_lab, shade_lab))
+                if not np.isfinite(delta):
+                    continue
+                bonus = -3.0 if product.get("undertone", "").lower() == undertone.lower() else 0
+                ranked.append((delta + bonus, delta, product))
+            ranked.sort(key=lambda entry: entry[0])
+            for _, delta, product in ranked[:self.max_matches]:
+                matches[key].append(product["shade_name"])
+                unified.append({
+                    "brand": product["brand"],
+                    "product_line": product.get("product_line", "Foundation"),
+                    "shade_name": product["shade_name"],
+                    "price_cad": product.get("price_cad"),
+                    "price_reference_url": product.get("price_reference_url"),
+                    "product_url": product.get("product_url", ""),
+                    "delta_e": round(delta, 2),
+                    "swatch_hex": product.get("hex_color"),
+                    "swatch_estimated": product.get("swatch_estimated", True),
+                })
+        unified.sort(key=lambda p: p["delta_e"])
+        matches["products"] = unified
         return matches
-    
+
     def _find_brand_matches_from_list(self, skin_lab: np.ndarray, undertone: str, products: List[Dict]) -> List[str]:
         """
         Find best matches from a list of products
