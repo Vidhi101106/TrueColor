@@ -39,12 +39,15 @@ class SkinAnalysisService:
         if len(skin_pixels.shape) == 2:
             skin_pixels = skin_pixels.reshape(-1, 1, 3)
         
-        lab_pixels = cv2.cvtColor(skin_pixels.astype(np.uint8), cv2.COLOR_BGR2LAB)
+        # OpenCV float32 LAB is true CIELAB: L* 0..100, a*/b* signed.
+        # uint8 LAB instead stores L 0..255 and offsets a/b by 128.
+        normalized_bgr = skin_pixels.astype(np.float32) / 255.0
+        lab_pixels = cv2.cvtColor(normalized_bgr, cv2.COLOR_BGR2LAB)
         lab_pixels = lab_pixels.reshape(-1, 3)
         
         # Remove outliers (very dark or very bright pixels)
         L_channel = lab_pixels[:, 0]
-        valid_mask = (L_channel > 20) & (L_channel < 240)
+        valid_mask = (L_channel > 3) & (L_channel < 98)
         lab_pixels = lab_pixels[valid_mask]
         
         if len(lab_pixels) < 10:
@@ -89,13 +92,13 @@ class SkinAnalysisService:
         # Cool undertones: Lower B (less yellow/more blue), lower A
         # Neutral: Balanced A and B
         
-        # Threshold-based classification
-        if B > 15 and A > 8:
+        # Conservative *heuristic* on signed CIELAB a*/b* values.
+        # Camera white balance and lighting make this a suggestion only.
+        if B >= 12 and B - A >= 4:
             return "warm"
-        elif B < 10 and A < 8:
+        if A >= 8 and A - B >= 4:
             return "cool"
-        else:
-            return "neutral"
+        return "neutral"
     
     def get_pantone_family(self, skin_lab: np.ndarray) -> str:
         """
@@ -162,22 +165,19 @@ class SkinAnalysisService:
         return np.sqrt(np.sum((lab1 - lab2) ** 2))
     
     def lab_to_rgb(self, lab: np.ndarray) -> np.ndarray:
-        """
-        Convert LAB to RGB for visualization
-        
-        Args:
-            lab: LAB color [L, A, B]
-            
-        Returns:
-            RGB color [R, G, B] in range 0-255
-        """
-        # Create a 1x1 LAB image
-        lab_img = np.uint8([[lab]])
-        
-        # Convert LAB to BGR
-        bgr_img = cv2.cvtColor(lab_img, cv2.COLOR_LAB2BGR)
-        
-        # Convert BGR to RGB
-        rgb = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB)
-        
-        return rgb[0, 0]
+        """Convert standard CIELAB [L*, a*, b*] to sRGB 0..255."""
+        lab_img = np.asarray(lab, dtype=np.float32).reshape(1, 1, 3)
+        rgb = cv2.cvtColor(lab_img, cv2.COLOR_LAB2RGB)[0, 0]
+        return np.rint(np.clip(rgb, 0, 1) * 255).astype(np.uint8)
+
+    def visualize_channels(self, lab: np.ndarray) -> dict:
+        """Generate RGB swatches for the existing frontend results page."""
+        L, A, B = [float(v) for v in lab]
+        def swatch(L_value, a_value, b_value):
+            return self.lab_to_rgb(np.array([L_value, a_value, b_value])).tolist()
+        return {
+            "combined": swatch(L, A, B),
+            "l_channel": swatch(L, 0, 0),
+            "a_channel": swatch(65, A, 0),
+            "b_channel": swatch(65, 0, B),
+        }
