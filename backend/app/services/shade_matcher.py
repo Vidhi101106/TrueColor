@@ -126,31 +126,48 @@ class ShadeMatcherService:
         return products
     
     async def find_matches(self, skin_lab: np.ndarray, undertone: str) -> Dict:
-        """Top three per brand plus a sortable list of product recommendations.
+        """Rank matches from every brand in the catalog, with top 3 per brand.
 
-        Color distance compares approximate screen swatches. It cannot guarantee
-        a match to the real physical product, especially under different lighting.
+        New brands require *only catalog entries*: the unified products array
+        powers the frontend's auto-populated brand selector. Older named keys
+        remain for backward compatibility with existing API consumers.
+
+        Digital swatch colors are uncalibrated demo estimates, not real-world
+        measurements of the foundation. Delta E is only an approximate ranking.
         """
         products = await self._load_products()
-        brand_keys = {
-            "fenty": "Fenty", "nars": "Nars", "tooFaced": "Too Faced",
-            "elf": "e.l.f.", "maybelline": "Maybelline",
+        legacy_keys = {
+            "fenty": "fenty", "nars": "nars", "too faced": "tooFaced",
+            "e.l.f.": "elf", "maybelline": "maybelline",
         }
-        matches = {key: [] for key in brand_keys}
+        matches = {key: [] for key in legacy_keys.values()}
         unified = []
-        for key, brand_name in brand_keys.items():
-            subset = [p for p in products if p["brand"].lower() == brand_name.lower()]
+
+        grouped = {}
+        for product in products:
+            brand = product.get("brand", "").strip().casefold()
+            if brand:
+                grouped.setdefault(brand, []).append(product)
+
+        for brand_key, brand_products in grouped.items():
             ranked = []
-            for product in subset:
-                shade_lab = np.array([product["lab_l"], product["lab_a"], product["lab_b"]], dtype=float)
-                delta = float(self.skin_analyzer.calculate_color_distance(skin_lab, shade_lab))
+            for product in brand_products:
+                shade_lab = np.array(
+                    [product["lab_l"], product["lab_a"], product["lab_b"]],
+                    dtype=float,
+                )
+                delta = float(
+                    self.skin_analyzer.calculate_color_distance(skin_lab, shade_lab)
+                )
                 if not np.isfinite(delta):
                     continue
                 bonus = -3.0 if product.get("undertone", "").lower() == undertone.lower() else 0
                 ranked.append((delta + bonus, delta, product))
+
             ranked.sort(key=lambda entry: entry[0])
             for _, delta, product in ranked[:self.max_matches]:
-                matches[key].append(product["shade_name"])
+                if brand_key in legacy_keys:
+                    matches[legacy_keys[brand_key]].append(product["shade_name"])
                 unified.append({
                     "brand": product["brand"],
                     "product_line": product.get("product_line", "Foundation"),
@@ -162,6 +179,7 @@ class ShadeMatcherService:
                     "swatch_hex": product.get("hex_color"),
                     "swatch_estimated": product.get("swatch_estimated", True),
                 })
+
         unified.sort(key=lambda p: p["delta_e"])
         matches["products"] = unified
         return matches
