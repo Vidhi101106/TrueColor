@@ -7,6 +7,7 @@ from app.utils.image_utils import hex_to_lab
 ELF_URL = "https://www.walmart.ca/en/ip/e-l-f-Cosmetics-Soft-Glam-Satin-Foundation/6000207918963"
 MAYBELLINE_URL = "https://www.maybelline.ca/en-ca/all-products/face-makeup/foundation/fit-me-matte-poreless-foundation"
 WELL_URL = "https://well.ca/products/maybelline-fit-me-matte-poreless_261856.html"
+ABH_URL = "https://www.sephora.com/ca/en/product/anastasia-beverly-hills-impeccable-blurring-second-skin-matte-foundation-P515098"
 
 # Example digital shades used only for approximate on-screen colour comparison.
 # They have NOT been validated against manufacturer swatch measurements.
@@ -48,5 +49,38 @@ EXTRA_PRODUCTS = (
         ("230 Natural Buff", "#CFA07A", "neutral"),
         ("310 Sun Beige", "#BB8058", "warm"),
         ("330 Toffee", "#9A6242", "warm"),
+    ])
+    + _make("Anastasia Beverly Hills", "Impeccable Blurring Second-Skin Matte Foundation",
+            66.50, ABH_URL, ABH_URL, [
+        # Shade labels from Anastasia/Sephora/Dermstore product shade guides.
+        # These colours are HAND-ESTIMATED demo values, NOT measured ABH swatches.
+        # They are only useful as a UI prototype until real reference swatches
+        # can be independently acquired and calibrated.
+        ("000N", "#F9E4D4", "neutral"),
+        ("0CR", "#F6DCD4", "cool"),
+        ("1N", "#F1D9C5", "neutral"),
+        ("1CR", "#EECFC6", "cool"),
+        ("1.5N", "#ECD3BC", "neutral"),
+        ("2N", "#E7C6AE", "neutral"),
+        ("2W", "#E9C69F", "warm"),
+        ("2WP", "#E6BDA7", "warm"),
+        ("2.5W", "#DDB795", "warm"),
+        ("3N", "#D7AD8F", "neutral"),
+        ("3W", "#D8A67B", "warm"),
+        ("3WO", "#CBA07C", "warm"),
+        ("3CR", "#D2A18D", "cool"),
+        ("4N", "#C49375", "neutral"),
+        ("4W", "#BF865E", "warm"),
+        ("4WP", "#C58B75", "warm"),
+        ("4WO", "#B8855B", "warm"),
+        ("4.5W", "#B57D55", "warm"),
+        ("5W", "#AD744C", "warm"),
+        ("6N", "#996745", "neutral"),
+        ("6W", "#95613D", "warm"),
+        ("6.5N", "#865A42", "neutral"),
+        ("7N", "#78503D", "neutral"),
+        ("7.5N", "#714638", "neutral"),
+        ("8N", "#603C2D", "neutral"),
+        ("9N", "#4F2F25", "neutral"),
     ])
 )
