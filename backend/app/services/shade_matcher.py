@@ -15,6 +15,33 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Canadian regular/reference prices, not live checkout prices. Sephora Canada
+# may discount individual shades or change prices without notice.
+PREMIUM_PRODUCT_REFERENCES = {
+    "fenty": {
+        "price_cad": 54.00,
+        "product_line": "Pro Filt'r Soft Matte Longwear Liquid Foundation",
+        "url": "https://www.sephora.com/ca/en/product/pro-filtr-soft-matte-longwear-foundation-P87985432",
+    },
+    "nars": {
+        "price_cad": 73.00,
+        "product_line": "Natural Radiant Longwear Full Coverage Foundation",
+        "url": "https://www.sephora.com/ca/en/product/natural-radiant-longwear-foundation-P427301",
+    },
+    "too faced": {
+        "price_cad": 66.00,
+        "product_line": "Born This Way Undetectable Medium-To-Full Coverage Foundation",
+        "url": "https://www.sephora.com/ca/en/product/too-faced-born-this-way-natural-finish-foundation-P517843",
+    },
+}
+
+
+def _reference_for_brand(brand: str):
+    """Return verified product-page links for the three original brands."""
+    brand_name = brand.casefold().replace("beauty by rihanna", "").replace("beauty", "").strip()
+    return PREMIUM_PRODUCT_REFERENCES.get(brand_name)
+
+
 
 class ShadeMatcherService:
     """Service for matching skin tones to makeup shades"""
@@ -62,6 +89,18 @@ class ShadeMatcherService:
                 self._products_cache = self._convert_local_to_products(MAKEUP_DATABASE) + EXTRA_PRODUCTS
                 logger.info(f"📦 Using local database with {len(self._products_cache)} products")
         
+        # Attach public storefront references even to products loaded from
+        # Supabase, whose older rows may lack price/link metadata.
+        for product in self._products_cache:
+            reference = _reference_for_brand(product["brand"])
+            if reference:
+                product.setdefault("product_line", reference["product_line"])
+                if product.get("price_cad") is None:
+                    product["price_cad"] = reference["price_cad"]
+                if not product.get("price_reference_url"):
+                    product["price_reference_url"] = reference["url"]
+                if not product.get("product_url"):
+                    product["product_url"] = reference["url"]
         return self._products_cache
     
     def _convert_local_to_products(self, local_db):
