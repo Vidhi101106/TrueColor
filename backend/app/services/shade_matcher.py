@@ -8,6 +8,7 @@ import numpy as np
 from typing import Dict, List
 from app.data.makeup_database import MAKEUP_DATABASE
 from app.data.extended_catalog import EXTRA_PRODUCTS
+from app.utils.image_utils import hex_to_lab
 from app.database.supabase_client import supabase_client
 from app.services.skin_analysis import SkinAnalysisService
 import logging
@@ -43,9 +44,19 @@ class ShadeMatcherService:
         if self._products_cache is None:
             if self._using_supabase:
                 # Load from Supabase
-                self._products_cache = await supabase_client.get_all_products()
-                self._products_cache.extend(EXTRA_PRODUCTS)
-                logger.info(f"📦 Loaded {len(self._products_cache)} products from Supabase")
+                db_products = await supabase_client.get_all_products()
+                if not db_products:
+                    logger.warning("Database empty or unavailable; using local demonstration catalogue")
+                    db_products = self._convert_local_to_products(MAKEUP_DATABASE)
+                else:
+                    # Existing stored LAB columns may use OpenCV's legacy uint8 encoding.
+                    # Recompute from hex instead so values use the same CIELAB scale.
+                    for p in db_products:
+                        if p.get("hex_color"):
+                            lab = hex_to_lab(p["hex_color"])
+                            p["lab_l"], p["lab_a"], p["lab_b"] = [float(v) for v in lab]
+                self._products_cache = db_products + EXTRA_PRODUCTS
+                logger.info(f"📦 Loaded {len(self._products_cache)} products")
             else:
                 # Fallback to local database
                 self._products_cache = self._convert_local_to_products(MAKEUP_DATABASE) + EXTRA_PRODUCTS
