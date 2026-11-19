@@ -95,48 +95,18 @@ def enhance_image(image: np.ndarray) -> np.ndarray:
 
 
 def hex_to_lab(hex_color: str) -> np.ndarray:
-    """
-    Convert hex color to LAB color space
-    
-    Args:
-        hex_color: Hex color string (e.g., "#FFAA88")
-        
-    Returns:
-        LAB color as numpy array [L, A, B]
-    """
-    # Remove '#' if present
-    hex_color = hex_color.lstrip('#')
-    
-    # Convert hex to RGB
-    r = int(hex_color[0:2], 16)
-    g = int(hex_color[2:4], 16)
-    b = int(hex_color[4:6], 16)
-    
-    # Create BGR image (OpenCV format)
-    bgr = np.uint8([[[b, g, r]]])
-    
-    # Convert to LAB
-    lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
-    
-    return lab[0, 0].astype(float)
+    """Convert sRGB hex to true CIELAB (L* 0..100, signed a*/b*)."""
+    color = hex_color.lstrip("#")
+    if len(color) != 6:
+        raise ValueError("Expected a six-digit hex color")
+    r, g, b = [int(color[i:i + 2], 16) for i in (0, 2, 4)]
+    bgr = np.array([[[b, g, r]]], dtype=np.float32) / 255.0
+    return cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[0, 0].astype(float)
 
 
 def lab_to_hex(lab: np.ndarray) -> str:
-    """
-    Convert LAB color to hex string
-    
-    Args:
-        lab: LAB color [L, A, B]
-        
-    Returns:
-        Hex color string
-    """
-    # Create LAB image
-    lab_img = np.uint8([[lab]])
-    
-    # Convert to BGR
-    bgr = cv2.cvtColor(lab_img, cv2.COLOR_LAB2BGR)
-    b, g, r = bgr[0, 0]
-    
-    # Convert to hex
+    """Convert true CIELAB back to a displayable sRGB hex swatch."""
+    lab_img = np.asarray(lab, dtype=np.float32).reshape(1, 1, 3)
+    bgr = cv2.cvtColor(lab_img, cv2.COLOR_LAB2BGR)[0, 0]
+    b, g, r = np.rint(np.clip(bgr, 0, 1) * 255).astype(np.uint8)
     return f"#{r:02x}{g:02x}{b:02x}"
