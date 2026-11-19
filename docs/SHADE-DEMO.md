@@ -19,8 +19,12 @@ commercially validated foundation matcher.
   e.l.f. Soft Glam Satin for CAD $9.98 and Well.ca listed Maybelline Fit Me
   Matte + Poreless for CAD $14.99. Availability and prices can change, and
   stores may have different listings for different shades.
-- Prices on the original Fenty, NARS and Too Faced catalog remain unknown.
-  They sort after known-price products and are excluded from budget filters.
+- The original catalog now includes verified Sephora Canada **reference** prices:
+  Fenty Pro Filt'r Soft Matte **CAD $54 regular** (Sephora currently shows
+  some shades on sale at $16.20), NARS Natural Radiant Longwear **CAD $73**,
+  and Too Faced Born This Way **CAD $66**. The link on each card opens the
+  product listing, not necessarily a preselected shade. Prices and stock
+  may vary by shade, retailer and date.
 - New e.l.f./Maybelline hex swatches are visual **estimates**, not captured
   from manufacturer color calibration. Existing brand swatches are similarly
   approximate. Delta E ranking is a heuristic, not a guarantee of true
@@ -35,6 +39,9 @@ Sources:
 - https://www.walmart.ca/en/ip/e-l-f-Cosmetics-Soft-Glam-Satin-Foundation/6000207918963
 - https://well.ca/products/maybelline-fit-me-matte-poreless_261856.html
 - https://www.maybelline.ca/en-ca/all-products/face-makeup/foundation/fit-me-matte-poreless-foundation
+- https://www.sephora.com/ca/en/product/pro-filtr-soft-matte-longwear-foundation-P87985432
+- https://www.sephora.com/ca/en/product/natural-radiant-longwear-foundation-P427301
+- https://www.sephora.com/ca/en/product/too-faced-born-this-way-natural-finish-foundation-P517843
 
 ## Mac run-through
 
