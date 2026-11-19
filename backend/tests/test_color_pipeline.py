@@ -47,6 +47,17 @@ class ShadePipelineTests(unittest.TestCase):
         self.assertTrue(matches["products"])
         self.assertTrue(any(p["price_cad"] is not None for p in matches["products"]))
 
+    def test_original_brands_include_prices_and_store_links(self):
+        matches = asyncio.run(ShadeMatcherService().find_matches(hex_to_lab("#D6A47F"), "warm"))
+        expected = {"Fenty": 54.00, "Nars": 73.00, "Too Faced": 66.00}
+        for brand, regular_reference_price in expected.items():
+            recommendations = [p for p in matches["products"] if p["brand"] == brand]
+            self.assertTrue(recommendations, f"No recommendations for {brand}")
+            for product in recommendations:
+                self.assertEqual(product["price_cad"], regular_reference_price)
+                self.assertTrue(product["product_url"].startswith("https://www.sephora.com/ca/en/product/"))
+                self.assertEqual(product["price_reference_url"], product["product_url"])
+
 
 if __name__ == "__main__":
     unittest.main()
