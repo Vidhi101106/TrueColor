@@ -97,46 +97,36 @@ class FaceDetectionService:
         return detection_result.face_landmarks[0]
     
     def extract_skin_regions(self, image: np.ndarray, face_landmarks: List) -> np.ndarray:
+        """Sample small cheek patches, avoiding broad landmark polygons.
+
+        Earlier code filled convex polygons using unordered landmark indices.
+        That could include background, hair, eyes and lips. Two conservative
+        cheek regions are a better starting point, but photos remain uncalibrated.
         """
-        Extract skin pixels from specific facial regions
-        
-        Args:
-            image: BGR image from OpenCV
-            face_landmarks: List of MediaPipe face landmarks
-            
-        Returns:
-            Array of skin pixels in BGR format
-        """
-        height, width = image.shape[:2]
-        skin_pixels = []
-        
-        # Extract pixels from each skin region
-        for region_name, landmark_indices in self.skin_regions.items():
-            # Get coordinates for this region
-            region_points = []
-            for idx in landmark_indices:
-                if idx < len(face_landmarks):
-                    landmark = face_landmarks[idx]
-                    x = int(landmark.x * width)
-                    y = int(landmark.y * height)
-                    region_points.append([x, y])
-            
-            if len(region_points) < 3:
+        h, w = image.shape[:2]
+        if not face_landmarks:
+            return np.empty((0, 3), dtype=np.uint8)
+        landmarks = face_landmarks
+        if len(landmarks) <= 425:
+            return np.empty((0, 3), dtype=np.uint8)
+        left_eye = landmarks[33]
+        right_eye = landmarks[263]
+        face_width = max(1, np.hypot((left_eye.x - right_eye.x) * w,
+                                      (left_eye.y - right_eye.y) * h))
+        radius = max(3, int(face_width * 0.11))
+        samples = []
+        for idx in (205, 425):
+            p = landmarks[idx]
+            x, y = int(p.x * w), int(p.y * h)
+            x0, x1 = max(0, x - radius), min(w, x + radius + 1)
+            y0, y1 = max(0, y - radius), min(h, y + radius + 1)
+            if x0 >= x1 or y0 >= y1:
                 continue
-            
-            # Create mask for this region
-            mask = np.zeros((height, width), dtype=np.uint8)
-            region_points = np.array(region_points, dtype=np.int32)
-            cv2.fillConvexPoly(mask, region_points, 255)
-            
-            # Extract pixels
-            region_pixels = image[mask == 255]
-            
-            if len(region_pixels) > 0:
-                skin_pixels.extend(region_pixels)
-        
-        return np.array(skin_pixels)
-    
+            patch = image[y0:y1, x0:x1].reshape(-1, 3)
+            if len(patch):
+                samples.append(patch)
+        return np.concatenate(samples) if samples else np.empty((0, 3), dtype=np.uint8)
+
     def get_bounding_box(self, image: np.ndarray, face_landmarks: any) -> tuple:
         """
         Get bounding box coordinates for detected face
