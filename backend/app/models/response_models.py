@@ -3,7 +3,19 @@ Pydantic models for API responses
 """
 
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
+
+
+class ProductRecommendation(BaseModel):
+    brand: str
+    product_line: str
+    shade_name: str
+    price_cad: Optional[float] = None
+    price_reference_url: Optional[str] = None
+    product_url: str
+    delta_e: float
+    swatch_hex: Optional[str] = None
+    swatch_estimated: bool = True
 
 
 class AnalysisResponse(BaseModel):
@@ -40,6 +52,11 @@ class AnalysisResponse(BaseModel):
         default_factory=list,
         description="Recommended Too Faced foundation shades"
     )
+
+    elf: List[str] = Field(default_factory=list, description="Suggested e.l.f. Soft Glam shades")
+    maybelline: List[str] = Field(default_factory=list, description="Suggested Maybelline Fit Me shades")
+    products: List[ProductRecommendation] = Field(default_factory=list)
+    colors: dict[str, List[int]] = Field(default_factory=dict)
     
     class Config:
         json_schema_extra = {
