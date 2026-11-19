@@ -160,6 +160,10 @@ async def analyze_face(
         # Prepare response
         response = AnalysisResponse(
             skinLAB=skin_lab.tolist(),
+            colors=skin_analyzer.visualize_channels(skin_lab),
+            elf=matches.get("elf", []),
+            maybelline=matches.get("maybelline", []),
+            products=matches.get("products", []),
             undertone=undertone,
             pantone_family=pantone_family,
             fenty=matches.get("fenty", []),
